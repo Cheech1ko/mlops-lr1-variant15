@@ -1,0 +1,171 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python -m src.prepare
+    deps:
+    - path: data/raw/diabetic_data.csv
+      hash: md5
+      md5: 2be547d54980f1194bd812c32c1209fa
+      size: 18332944
+    - path: src/prepare.py
+      hash: md5
+      md5: 8d00b7306fe0e6715f56e8c87caaadef
+      size: 3143
+    - path: src/schema.py
+      hash: md5
+      md5: 6f7988a9f7630d1c28ba48dc8fe3f794
+      size: 1016
+    - path: src/utils.py
+      hash: md5
+      md5: 3e9f2914438df9901fe6d89ad1bff48f
+      size: 1435
+    params:
+      params.yaml:
+        data:
+          raw: data/raw/diabetic_data.csv
+          target: readmitted
+          drop:
+          - encounter_id
+          - patient_nbr
+          - weight
+          - payer_code
+          - medical_specialty
+          - diag_1
+          - diag_2
+          - diag_3
+          test_size: 0.2
+          split_by_age: true
+          age_threshold: 60
+        train.seed: 42
+    outs:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 3dd3fb78c3d1a6ff621093296059348d
+      size: 12318592
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 7c71b47bcc181ee08372fc69e8c62c3d
+      size: 6015019
+  featurize:
+    cmd: python -m src.featurize
+    deps:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 3dd3fb78c3d1a6ff621093296059348d
+      size: 12318592
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 7c71b47bcc181ee08372fc69e8c62c3d
+      size: 6015019
+    - path: src/featurize.py
+      hash: md5
+      md5: b9c3f5b8c49eec68fd8d55210310da95
+      size: 4247
+    - path: src/utils.py
+      hash: md5
+      md5: 3e9f2914438df9901fe6d89ad1bff48f
+      size: 1435
+    params:
+      params.yaml:
+        data.drop:
+        - encounter_id
+        - patient_nbr
+        - weight
+        - payer_code
+        - medical_specialty
+        - diag_1
+        - diag_2
+        - diag_3
+        data.target: readmitted
+        featurize:
+          numeric_imputer_strategy: median
+          categorical_imputer_strategy: most_frequent
+          onehot_handle_unknown: ignore
+          onehot_min_frequency: 10
+    outs:
+    - path: data/features/test.csv
+      hash: md5
+      md5: fb7da219039ea1f01ad1844ee03d1689
+      size: 26149781
+    - path: data/features/train.csv
+      hash: md5
+      md5: 56ee88ac85799603dbd4d0834277dc0a
+      size: 12671630
+    - path: models/preprocessor.joblib
+      hash: md5
+      md5: d43c97e507e28008e13e8ff515efd36b
+      size: 13021
+  train:
+    cmd: python -m src.train
+    deps:
+    - path: data/features/train.csv
+      hash: md5
+      md5: 56ee88ac85799603dbd4d0834277dc0a
+      size: 12671630
+    - path: src/tracking.py
+      hash: md5
+      md5: c8c3f7b0bcec3d718da879d2eef71df2
+      size: 1449
+    - path: src/train.py
+      hash: md5
+      md5: 5d2e1ffba70577a9d06b81b97d345b19
+      size: 2130
+    - path: src/utils.py
+      hash: md5
+      md5: 3e9f2914438df9901fe6d89ad1bff48f
+      size: 1435
+    params:
+      params.yaml:
+        mlflow:
+          experiment: diabetes-readmission
+          model_name: diabetes-readmission-classifier
+          primary_metric: recall_macro
+        train:
+          model: gradient_boosting
+          n_estimators: 300
+          max_depth: 4
+          min_samples_leaf: 2
+          learning_rate: 0.1
+          seed: 42
+    outs:
+    - path: models/model.joblib
+      hash: md5
+      md5: 2996013b13cce0ae103ccdbb5d5b8287
+      size: 1962656
+  evaluate:
+    cmd: python -m src.evaluate
+    deps:
+    - path: data/features/test.csv
+      hash: md5
+      md5: fb7da219039ea1f01ad1844ee03d1689
+      size: 26149781
+    - path: models/model.joblib
+      hash: md5
+      md5: 2996013b13cce0ae103ccdbb5d5b8287
+      size: 1962656
+    - path: src/evaluate.py
+      hash: md5
+      md5: d14b838315ac8ff3cd0e42fff5cab48d
+      size: 2760
+    - path: src/tracking.py
+      hash: md5
+      md5: c8c3f7b0bcec3d718da879d2eef71df2
+      size: 1449
+    - path: src/utils.py
+      hash: md5
+      md5: 3e9f2914438df9901fe6d89ad1bff48f
+      size: 1435
+    params:
+      params.yaml:
+        data.target: readmitted
+        evaluate:
+          min_recall: 0.4
+    outs:
+    - path: reports/metrics.json
+      hash: md5
+      md5: 03ecdded1445807544bb1de8f6eb1410
+      size: 120
+    - path: reports/plots/confusion_matrix.csv
+      hash: md5
+      md5: 8c5eafe2e63b2efdd919ec2211638f3f
+      size: 97
