@@ -1,0 +1,52 @@
+# Все параметры пайплайна. Менять только здесь, в коде чисел быть не должно.
+ingest:
+  source_url: "https://archive.ics.uci.edu/ml/machine-learning-databases/00296/dataset_diabetes.zip"
+  raw_archive: data/external/dataset_diabetes.zip
+  raw_csv: data/external/diabetic_data.csv
+  output: data/raw/diabetic_data.csv
+  # v1: подмножество пациентов с возрастом [0-10) ... [50-60)
+  # v2: полный набор (age_filter: null)
+  age_filter: ["[0-10)", "[10-20)", "[20-30)", "[30-40)", "[40-50)", "[50-60)"]
+
+data:
+  raw: data/raw/diabetic_data.csv
+  target: readmitted
+  # многоклассовая: <30, >30, NO
+  drop:
+    - encounter_id
+    - patient_nbr
+    - weight          # слишком много пропусков
+    - payer_code      # много пропусков
+    - medical_specialty  # высокая кардинальность
+    - diag_1
+    - diag_2
+    - diag_3
+  test_size: 0.2
+  split_by_age: true   # false — случайное разбиение (для сравнения)
+  age_threshold: 60    # train: age <= 60, test: age > 60
+
+featurize:
+  numeric_imputer_strategy: median
+  categorical_imputer_strategy: most_frequent
+  onehot_handle_unknown: ignore
+  onehot_min_frequency: 10   # редкие категории в 'infrequent'
+
+train:
+  model: gradient_boosting  # random_forest | gradient_boosting
+  n_estimators: 300
+  max_depth: 4
+  min_samples_leaf: 2
+  learning_rate: 0.1
+  seed: 42
+
+evaluate:
+  min_recall: 0.50   # порог допуска модели (macro recall)
+
+mlflow:
+  experiment: diabetes-readmission
+  model_name: diabetes-readmission-classifier
+  primary_metric: recall_macro
+
+monitor:
+  drift_share_threshold: 0.3
+  min_recall_on_stream: 0.50
