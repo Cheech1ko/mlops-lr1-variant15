@@ -11,7 +11,6 @@ import sys
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
@@ -30,7 +29,8 @@ log = get_logger("evaluate")
 FEATURES = Path("data/features/test.csv")
 MODEL = Path("models/model.joblib")
 METRICS_OUT = Path("reports/metrics.json")
-PLOT_OUT = Path("reports/plots/pred_vs_true.csv")
+PLOT_OUT = Path("reports/plots/confusion_matrix.csv")
+
 
 def main() -> None:
     params = load_params()
@@ -58,14 +58,16 @@ def main() -> None:
         ),
         "n_test": int(len(frame)),
     }
-     ensure_parent(METRICS_OUT).write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    
+    # Теперь ensure_parent правильно создает папку reports/
+    ensure_parent(METRICS_OUT).write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
-    # confusion matrix для отчёта
     labels = sorted(y_test.unique())
     cm = confusion_matrix(y_test, y_pred, labels=labels)
     cm_df = pd.DataFrame(cm, index=[f"true_{l}" for l in labels],
                          columns=[f"pred_{l}" for l in labels])
-    cm_df.to_csv(ensure_parent(Path("reports/plots/confusion_matrix.csv")))
+    ensure_parent(PLOT_OUT.parent).mkdir(parents=True, exist_ok=True)
+    cm_df.to_csv(PLOT_OUT)
 
     log.info("classification_report:\n%s", classification_report(y_test, y_pred, zero_division=0))
     tracking.log_metrics({k: v for k, v in metrics.items() if k != "n_test"})
@@ -78,6 +80,7 @@ def main() -> None:
             min_recall,
         )
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
