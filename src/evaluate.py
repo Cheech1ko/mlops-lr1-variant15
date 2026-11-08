@@ -58,7 +58,7 @@ def main() -> None:
         ),
         "n_test": int(len(frame)),
     }
-    METRICS_OUT.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+     ensure_parent(METRICS_OUT).write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
     # confusion matrix для отчёта
     labels = sorted(y_test.unique())
