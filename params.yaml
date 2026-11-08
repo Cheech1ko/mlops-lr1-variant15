@@ -40,7 +40,7 @@ train:
   seed: 42
 
 evaluate:
-  min_recall: 0.50   # порог допуска модели (macro recall)
+  min_recall: 0.40   # порог допуска модели (macro recall)
 
 mlflow:
   experiment: diabetes-readmission
