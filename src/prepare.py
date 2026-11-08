@@ -24,9 +24,11 @@ TEST_OUT = Path("data/processed/test.csv")
 
 def age_to_midpoint(age: str) -> float:
     """Преобразует строковый диапазон '[50-60)' в середину 55.0."""
-    lo, hi = age.strip("[]()").split("-")
+    # Убираем скобки и заменяем возможные тире на дефис
+    clean_age = str(age).replace("[", "").replace(")", "").replace("–", "-").replace("—", "-")
+    lo, hi = clean_age.split("-")
     return (float(lo) + float(hi)) / 2.0
-
+    
 def check(frame: pd.DataFrame, target: str) -> pd.DataFrame:
     validated = validate_raw(frame)
     log.info("схема пройдена: %d строк, %d колонок", len(validated), validated.shape[1])
@@ -41,9 +43,10 @@ def split(
     seed: int,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     if by_age:
-        age_mid = frame["age"].apply(age_to_midpoint)
-        train = frame[age_mid <= age_threshold].copy()
-        test = frame[age_mid > age_threshold].copy()
+        # Строгое приведение к float, чтобы избежать проблем с типами
+        age_mid = frame["age"].apply(age_to_midpoint).astype(float)
+        train = frame[age_mid <= float(age_threshold)].copy()
+        test = frame[age_mid > float(age_threshold)].copy()
         return train, test
     shuffled = frame.sample(frac=1.0, random_state=seed).reset_index(drop=True)
     edge = int(len(shuffled) * 0.8)
